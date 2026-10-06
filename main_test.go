@@ -169,7 +169,6 @@ var _ = Describe("discordPlugin", func() {
 		Context("playing state", func() {
 			It("returns not authorized error when user not in config", func() {
 				pdk.PDKMock.On("GetConfig", clientIDKey).Return("test-client-id", true)
-				pdk.PDKMock.On("GetConfig", clearOnPauseKey).Return("false", true)
 				pdk.PDKMock.On("GetConfig", usersKey).Return(`[{"username":"otheruser","token":"token"}]`, true)
 
 				err := plugin.PlaybackReport(baseRequest("playing"))
@@ -245,13 +244,19 @@ var _ = Describe("discordPlugin", func() {
 		Context("paused state with clearonpause enabled", func() {
 			It("clears activity", func() {
 				pdk.PDKMock.On("GetConfig", clearOnPauseKey).Return("true", true)
+				setupConfigMocks()
+				setupConnectMocks()
 
-				host.WebSocketMock.On("SendText", "testuser", mock.MatchedBy(func(msg string) bool {
-					return strings.Contains(msg, `"op":3`) && strings.Contains(msg, `"activities":null`)
-				})).Return(nil)
+				var sentPayload string
+				host.WebSocketMock.On("SendText", "testuser", mock.Anything).Run(func(args mock.Arguments) {
+					sentPayload = args.Get(1).(string)
+				}).Return(nil)
 
 				err := plugin.PlaybackReport(baseRequest("paused"))
 				Expect(err).ToNot(HaveOccurred())
+
+				Expect(sentPayload).To(ContainSubstring(`"op":3`))
+				Expect(sentPayload).To(ContainSubstring(`"activities":null`))
 			})
 		})
 

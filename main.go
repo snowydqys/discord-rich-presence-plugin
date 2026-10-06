@@ -171,6 +171,12 @@ func formatRequest(input scrobbler.PlaybackReportRequest) string {
 
 func (p *discordPlugin) handlePlayingOrPaused(input scrobbler.PlaybackReportRequest) error {
 	paused := input.State == statePaused
+
+	clientID, userToken, err := connectUser(input.Username)
+	if err != nil {
+		return err
+	}
+
 	clearOnPauseEnabled, _ := pdk.GetConfig(clearOnPauseKey)
 	clearOnPause := clearOnPauseEnabled == "true"
 
@@ -180,11 +186,6 @@ func (p *discordPlugin) handlePlayingOrPaused(input scrobbler.PlaybackReportRequ
 	}
 
 	pdk.Log(pdk.LogInfo, fmt.Sprintf("Setting presence for user %s, track: %s (paused=%v)", input.Username, input.Track.Title, paused))
-
-	clientID, userToken, err := connectUser(input.Username)
-	if err != nil {
-		return err
-	}
 
 	activityName, statusDisplayType := resolveActivityName(input.Track)
 
